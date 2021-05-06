@@ -101,6 +101,14 @@ func (a *apiParamsBuilder) apiParamByHTTPRule(rule *annotations.HttpRule, inputT
 		return nil, xerrors.Errorf(": %w", err)
 	}
 
+	var params []string
+	if endpoint.method == "GET" {
+		for _, field := range inputType.GetFields() {
+			param := field.GetName()
+			params = append(params, param)
+		}
+	}
+
 	bodyMsgType, err := a.pbdesc.BodyMsgTypeNameByHTTPRule(inputType, rule)
 	bodyNotFound := xerrors.Is(err, pbdesc.ErrBodyNotFound)
 	if err != nil && !bodyNotFound {
@@ -128,6 +136,7 @@ func (a *apiParamsBuilder) apiParamByHTTPRule(rule *annotations.HttpRule, inputT
 		Path:       endpoint.path,
 		Body:       jsonBody,
 		Headers:    a.headers,
+		Params:     params,
 	}, nil
 }
 

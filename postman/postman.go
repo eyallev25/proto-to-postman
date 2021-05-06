@@ -37,6 +37,13 @@ type Header struct {
 	Name  string `json:"name,omitempty"`
 }
 
+type QueryParams struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+	Disabled  bool `json:"disabled"`
+	Description  string `json:"description,omitempty"`
+}
+
 type Body struct {
 	Mode string `json:"mode"`
 	Raw  string `json:"raw"`
@@ -46,6 +53,7 @@ type URL struct {
 	Raw  string   `json:"raw"`
 	Host []string `json:"host"`
 	Path []string `json:"path"`
+	Query []QueryParams `json:"query"`
 }
 
 type ProtocolProfileBehavior struct {
@@ -58,6 +66,7 @@ type APIParam struct {
 	Path       string
 	Body       string
 	Headers    []*HeaderParam
+	Params     []string
 }
 
 type HeaderParam struct {
@@ -85,7 +94,7 @@ func BuildItem(api *APIParam) Item {
 	}
 
 	body := NewBody(api.Body)
-	url := NewURL(api.BaseURL, api.Path)
+	url := NewURL(api.BaseURL, api.Path, api.Params)
 	return NewItem(api.Path, api.HTTPMethod, headers, body, url)
 }
 
@@ -98,6 +107,15 @@ func NewHeader(key string, value string) Header {
 	}
 }
 
+func NewQueryParams(key string) QueryParams {
+	return QueryParams{
+		Key:   key,
+		Value: "",
+		Disabled:  true,
+		Description:  "",
+	}
+}
+
 func NewBody(value string) Body {
 	return Body{
 		Mode: "raw",
@@ -105,7 +123,7 @@ func NewBody(value string) Body {
 	}
 }
 
-func NewURL(host string, urlPath string) URL {
+func NewURL(host string, urlPath string, params []string) URL {
 	var ps []string
 	paths := strings.Split(urlPath, "/")
 	for i := range paths {
@@ -116,10 +134,19 @@ func NewURL(host string, urlPath string) URL {
 	}
 
 	all := append([]string{host}, ps...)
+
+	var queryParams []QueryParams
+	for _, q := range params {
+		queryParam := NewQueryParams(q)
+		if !strings.Contains(urlPath, queryParam.Key) {
+			queryParams = append(queryParams, queryParam)
+		}
+	}
 	return URL{
 		Raw:  path.Join(all...),
 		Host: []string{host},
 		Path: ps,
+		Query: queryParams,
 	}
 }
 func NewItem(apiName string, httpMethod string, header []Header, body Body, url URL) Item {
